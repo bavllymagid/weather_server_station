@@ -6,6 +6,8 @@
 #include "ESP32_MailClient.h"
 #include "ArduinoJson.h"
 #include <WiFiManager.h>
+#include <iostream>
+
 
 #define DHTPIN 33  // Digital pin connected to the DHT sensor
 
@@ -22,7 +24,7 @@ const char* sender = "rick.sanchez4044@gmail.com";
 // sender's password
 const char* passwordSend = "jhhcdrfpyirztoeo";
 // receiver's email address
-const char* receiver = "pavllymagid04@gmail.com";
+const char* receiver = "";
 
 //Your Domain name with URL path or IP address with path
 String statusPostLink = "https://weather-app-ec620-default-rtdb.europe-west1.firebasedatabase.app/status.json";
@@ -198,4 +200,8 @@ void wifiConnect() {
   Serial.println("");
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
+}
+
+void saveReadingsToCSV(float altitude, float pressure, float temperature, float humidity) {
+  Serial.println(String(altitude) + "," + String(pressure) + "," + String(temperature) + "," + String(humidity));
 }
