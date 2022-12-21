@@ -5,15 +5,17 @@
 #include <HTTPClient.h>
 #include "ESP32_MailClient.h"
 #include "ArduinoJson.h"
+#include <WiFiManager.h>
 
 #define DHTPIN 33  // Digital pin connected to the DHT sensor
 
 #define DHTTYPE DHT11
 Adafruit_BMP085 bmp;
 SMTPData smtpData;
+WiFiManager wifiManager;
 
-const char* ssid = "Mazen7";
-const char* password = "123454321";
+const char* ssid = "";
+const char* password = "";
 
 // sender's email address
 const char* sender = "rick.sanchez4044@gmail.com";
@@ -36,34 +38,12 @@ void setup() {
     Serial.println("Could not find a valid BMP085/BMP180 sensor, check wiring!");
     while (1) {}
   }
-
   dht.begin();
-  Serial.println("Enter your SSID: ");
-  ssid = Serial.readString().c_str();
-  Serial.println("Enter your password: ");
-  password = Serial.readString().c_str();
-
-  WiFi.begin(ssid, password);
-  Serial.println("Connecting");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    //stop after 10 seconds and ask to input the ssid and password again
-    if (millis() > 10000) {
-      Serial.println("Connection failed");
-      Serial.println("Please check your ssid and password");
-      Serial.println("Restarting");
-      ESP.restart();
-    }
-  }
-  Serial.println("");
-  Serial.print("Connected to WiFi network with IP Address: ");
-  Serial.println(WiFi.localIP());
+  wifiConnect();
 }
 
 void loop() {
   if ((millis() - lastTime) > timerDelay) {
-
     float humidity = dht.readHumidity();
     float temperature = bmp.readTemperature();
     float pressure = bmp.readPressure();
@@ -115,7 +95,6 @@ void loop() {
       Serial.println(httpRequestData);
       // Send HTTP POST request
       int httpResponseCode = http.POST(httpRequestData);
-
       if (httpResponseCode > 0) {
         Serial.print("HTTP Response code: ");
         Serial.println(httpResponseCode);
@@ -127,6 +106,8 @@ void loop() {
 
     } else {
       Serial.println("WiFi Disconnected");
+      WiFi.disconnect();
+      wifiConnect();
     }
     lastTime = millis();
   }
@@ -134,8 +115,8 @@ void loop() {
 
 bool sendEmailNotification(String emailMessage) {
   // Set email credentials
-  smtpData.setLogin("smtp.gmail.com", 8080, sender, passwordSend);
-  smtpData.setSender("ESP32", sender);
+  smtpData.setLogin("smtp.gmail.com", 465, sender, passwordSend);
+  smtpData.setSender("Weather Service", sender);
   smtpData.setPriority("High");
   // Set the subject
   smtpData.setSubject("Weather Alert");
@@ -201,4 +182,20 @@ void send_email(float altitude, float pressure, float temperature, float humidit
   if (altitude > altitudeThres) {
     sendEmailNotification("The altitude is too high, currently at " + String(altitude) + " meters");
   }
+}
+
+
+void wifiConnect() {
+  bool res = wifiManager.autoConnect("AutoConnectAP", "password");
+  Serial.print(wifiManager.getWiFiHostname());
+  if (!res) {
+    Serial.println("Failed to connect");
+    // ESP.restart();
+  } else {
+    //if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+  }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
 }
