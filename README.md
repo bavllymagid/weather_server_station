@@ -18,6 +18,7 @@ Weather station is the server that detects the weather conditions and send it to
 - Arduino IDE
 - DHT11 sesnsor 
 - BMP085 sensor 
+- 10k resistor
 
 #### [Download Required Libraries](https://drive.google.com/file/d/1Qosicwro1eMv9MhTjYWNtzT84zLT3i_G/view?usp=sharing)
 ## Circuit
