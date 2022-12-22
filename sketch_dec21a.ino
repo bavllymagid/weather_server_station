@@ -6,7 +6,7 @@
 #include "ESP32_MailClient.h"
 #include "ArduinoJson.h"
 #include <WiFiManager.h>
-#include <iostream>
+#include <ESPDateTime.h>
 
 
 #define DHTPIN 33  // Digital pin connected to the DHT sensor
@@ -42,6 +42,7 @@ void setup() {
   }
   dht.begin();
   wifiConnect();
+  setupDateTime();
 }
 
 void loop() {
@@ -85,6 +86,7 @@ void loop() {
       http.addHeader("Content-Type", "application/json");
       http.addHeader("x-http-method-override", "PUT");
       // Data to send with HTTP POST
+      //YYYY-MM-DD HH:MI:SS
       String httpRequestData = "{\"humidity\":";
       httpRequestData += humidity;
       httpRequestData += ",\"temperature\":";
@@ -93,6 +95,8 @@ void loop() {
       httpRequestData += pressure;
       httpRequestData += ",\"altitude\":";
       httpRequestData += altitude;
+      httpRequestData += ",\"datetime\":";
+      httpRequestData += "\"" + DateTime.formatUTC(DateFormatter::SIMPLE) + "\"";
       httpRequestData += "}";
       Serial.println(httpRequestData);
       // Send HTTP POST request
@@ -204,4 +208,17 @@ void wifiConnect() {
 
 void saveReadingsToCSV(float altitude, float pressure, float temperature, float humidity) {
   Serial.println(String(altitude) + "," + String(pressure) + "," + String(temperature) + "," + String(humidity));
+}
+
+void setupDateTime() {
+  DateTime.setServer("eg.pool.ntp.org");
+  DateTime.setTimeZone("CST-8");
+  DateTime.begin();
+  if (!DateTime.isTimeValid()) {
+    Serial.println("Failed to get time from server.");
+  } else {
+    Serial.printf("Date Now is %s\n", DateTime.toISOString().c_str());
+    Serial.printf("Timestamp is %ld\n", DateTime.now());
+    Serial.printf("UTC: %s",  DateTime.formatUTC(DateFormatter::SIMPLE).c_str());
+  }
 }
