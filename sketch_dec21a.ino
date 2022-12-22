@@ -29,9 +29,10 @@ const char* receiver = "";
 //Your Domain name with URL path or IP address with path
 String statusPostLink = "https://weather-app-ec620-default-rtdb.europe-west1.firebasedatabase.app/status.json";
 String settingsGetLink = "https://weather-app-ec620-default-rtdb.europe-west1.firebasedatabase.app/settings.json";
+String logPostLink = "https://weather-app-ec620-default-rtdb.europe-west1.firebasedatabase.app/log.json";
 
 unsigned long lastTime = 0;
-unsigned long timerDelay = 50000;
+unsigned long timerDelay = 5000;
 
 DHT dht(DHTPIN, DHTTYPE);
 void setup() {
@@ -43,6 +44,8 @@ void setup() {
   dht.begin();
   wifiConnect();
   setupDateTime();
+  Serial.println();
+  Serial.print("DateTime,Altitude,Pressure,Temperature,Humidity\n");
 }
 
 void loop() {
@@ -50,11 +53,10 @@ void loop() {
     float humidity = dht.readHumidity();
     float temperature = bmp.readTemperature();
     float pressure = bmp.readPressure();
-    float alt = bmp.readAltitude();
     float pressure_sea_level = bmp.readSealevelPressure();
-    float altitude = bmp.readAltitude(102000);
-    print_readings(altitude, pressure_sea_level, alt, pressure, temperature, humidity);
-
+    float altitude = bmp.readAltitude(101325);
+    //print_readings(altitude, pressure_sea_level, alt, pressure, temperature, humidity);
+    logData(altitude, pressure, temperature, humidity);
     //Check WiFi connection status
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
@@ -63,7 +65,7 @@ void loop() {
       int settingsResponseCode = http.GET();
       if (settingsResponseCode > 0) {
         String payload = http.getString();
-        Serial.println(payload);
+        //Serial.println(payload);
         // parse the json response
         DynamicJsonDocument doc(1024);
         deserializeJson(doc, payload);
@@ -98,18 +100,17 @@ void loop() {
       httpRequestData += ",\"datetime\":";
       httpRequestData += "\"" + DateTime.formatUTC(DateFormatter::SIMPLE) + "\"";
       httpRequestData += "}";
-      Serial.println(httpRequestData);
+      //Serial.println(httpRequestData);
       // Send HTTP POST request
       int httpResponseCode = http.POST(httpRequestData);
       if (httpResponseCode > 0) {
-        Serial.print("HTTP Response code: ");
-        Serial.println(httpResponseCode);
+        // Serial.print("HTTP Response code: ");
+        // Serial.println(httpResponseCode);
       } else {
         Serial.print("Error code: ");
         Serial.println(httpResponseCode);
       }
       http.end();
-
     } else {
       Serial.println("WiFi Disconnected");
       WiFi.disconnect();
@@ -219,6 +220,32 @@ void setupDateTime() {
   } else {
     Serial.printf("Date Now is %s\n", DateTime.toISOString().c_str());
     Serial.printf("Timestamp is %ld\n", DateTime.now());
-    Serial.printf("UTC: %s",  DateTime.formatUTC(DateFormatter::SIMPLE).c_str());
+    Serial.printf("UTC: %s", DateTime.formatUTC(DateFormatter::SIMPLE).c_str());
   }
+}
+
+void logData(float altitude, float pressure, float temperature, float humidity) {
+  Serial.print(DateTime.formatUTC(DateFormatter::SIMPLE));
+  Serial.print(",");
+  Serial.print(altitude);
+  Serial.print(",");
+  Serial.print(pressure);
+  Serial.print(",");
+  Serial.print(temperature);
+  Serial.print(",");
+  Serial.println(humidity);
+  HTTPClient http;
+  http.begin(logPostLink);
+  http.addHeader("Content-Type", "text/plain");
+  //append string to log file on server
+  String httpRequestData = "\"" + DateTime.formatUTC(DateFormatter::SIMPLE) + "," + String(altitude) + "," + String(pressure) + "," + String(temperature) + "," + String(humidity) + "\"";
+  int httpResponseCode = http.POST(httpRequestData);
+  if (httpResponseCode > 0) {
+    // Serial.print("HTTP Response code: ");
+    // Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  http.end();
 }
